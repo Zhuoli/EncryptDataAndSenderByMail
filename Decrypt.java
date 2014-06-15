@@ -9,18 +9,11 @@ import java.io.*;
 import java.util.*;
 public class Decrypt {
 	static int KEY_LEN=256;
-	static boolean DEBUG = true;
+	static boolean DEBUG = false;
 	byte[] signature=null;
 	byte[] cipher_text=null;
 	byte[] aesKeyEncyrpted=null;
-	public static void main(String[] args) throws Exception {
-		if(args.length<5){
-			System.out.println("usage Error: ");
-			System.exit(0);
-		}
-		Decrypt instance=new Decrypt(args[1],args[2],args[3],args[4]);
-
-     }
+	
      /** Init ***/
      public Decrypt(String public_key_filename, String private_key_filename,String plaintext_filename,String cipher_filename) {
         if(isDecryptInputError(public_key_filename,private_key_filename,cipher_filename))
@@ -55,8 +48,7 @@ public class Decrypt {
 	     	for(byte b : plaintext){
 	     		System.out.print((char)b);
 	     	}
-	    
-
+	    writeByteToFile(new File(plaintext_filename),plaintext);
 
      }
      private SecretKey getSecKey(String public_key_filename, String private_key_filename)throws Exception{

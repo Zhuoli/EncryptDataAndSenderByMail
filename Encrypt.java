@@ -8,108 +8,113 @@ import java.security.spec.*;
 import java.io.*;
 
 public class Encrypt {
+    static boolean DEBUG=false;
+    // byte representation of parameters and IV
+    byte[] iv, cipherText, publicKey, plainText, privateKey, signature, aesKeyEncyrpted;
 
-	public static void main(String[] args) throws Exception {
-
-		String public_key_filename, private_key_filename, plaintext_file,output_file;
-                // input error halding
-                if(isInputError(args))
-                    System.exit(0);
-		// Public, private and signature instances
-		Cipher publicChiper = Cipher.getInstance("RSA");
-		Cipher secCipher = Cipher.getInstance("AES");
-		Signature sig = Signature.getInstance("SHA512withRSA");
-		KeyFactory rsaKeyFactory = KeyFactory.getInstance("RSA");
+	public Encrypt(String public_key_filename, String private_key_filename, String plaintext_file, String output_file){
 		Key aesKey;
-		PKCS8EncodedKeySpec privateSpec;
-		X509EncodedKeySpec publicSpec;
-		PrivateKey prvKey;
-		PublicKey pubKey;
-		
-		// byte representation of parameters and IV
-		byte[] iv, cipherText, publicKey, plainText, privateKey, signature, aesKeyEncyrpted;
-
-		// Encrypting files
-                // public file name
-		public_key_filename = args[0];
-                 // private file name
-		private_key_filename = args[1];
-		// plaintext_file name
-		plaintext_file = args[2];
-                // output_file name
-                output_file=args[3];
-				
-		
-		
-                /*********** Symmetric Encryption *************/	
-		// Symmetric (AES) key generation
-		KeyGenerator aesKeyGen = KeyGenerator.getInstance("AES");
-		aesKey = aesKeyGen.generateKey();
-		// read bytes from the file
-		plainText = readByteFromFile(new File(plaintext_file));
-		// setup IV key with random data and encrypt the file using AES key.
-		secCipher.init(Cipher.ENCRYPT_MODE, aesKey);
-		iv = secCipher.getIV();
-		cipherText = secCipher.doFinal(plainText);
-		
-                /*************  RSA Encryption *****************/
-                // init RSA keys
-		privateKey = readByteFromFile(new File(private_key_filename));
-		publicKey = readByteFromFile(new File(public_key_filename));
-		privateSpec = new PKCS8EncodedKeySpec(privateKey);
-		publicSpec = new X509EncodedKeySpec(publicKey);
-		prvKey = rsaKeyFactory.generatePrivate(privateSpec);
-		pubKey = rsaKeyFactory.generatePublic(publicSpec);
-
-		publicChiper.init(Cipher.WRAP_MODE, pubKey);
-        // encrypt AESkey
-		aesKeyEncyrpted = publicChiper.wrap(aesKey);
-
-		sig.initSign(prvKey);
-		//sig.update(iv);
-		sig.update(cipherText);
-		sig.update(aesKeyEncyrpted);
-		signature = sig.sign();
-		/** write to file **/
-		// write signature
-		System.out.println("Signature in HEX");
-        System.out.println("Length: "+ signature.length);
-		for (byte b : signature){
-			System.out.print(String.format("%02X ", b));
+		// check if file exist;
+		if(!areFile(public_key_filename,private_key_filename,plaintext_file)){
+			System.exit(0);
 		}
-        writeByteToFile(new File(output_file),signature);
-        // write AES key
-        System.out.println("\nAES encrypted key in HEX");
-                System.out.println("Length: "+ aesKeyEncyrpted.length);
-		for (byte b : aesKeyEncyrpted){
-			System.out.print(String.format("%02X ", b));
+		try{
+	        /*********** Symmetric Encryption *************/	
+			// Symmetric (AES) key generation
+			KeyGenerator aesKeyGen = KeyGenerator.getInstance("AES");
+			aesKey = aesKeyGen.generateKey();
+			cipherText=aesEncrypt(plaintext_file,aesKey);
+			/*************  RSA Encryption *****************/
+			rsaEncrypt(public_key_filename,private_key_filename,aesKey);
+			// write crypted data 2 file
+			write2file(output_file);
+		}catch(Exception e){
+			System.out.println(e.getMessage());
+			System.exit(0);
 		}
-        appendByteToFile(new File(output_file),aesKeyEncyrpted);
-        // write cipher text
-		System.out.println("\nCiphter Text");
-		for (byte b : cipherText){
-			System.out.print(String.format("%02X ", b));
-		}
-		System.out.println();
-        appendByteToFile(new File(output_file),cipherText);
   }
+  		private void write2file(String output_file)throws Exception{
+  			/** write to file **/
+            writeByteToFile(new File(output_file),signature);
+            // write AES key
+            appendByteToFile(new File(output_file),aesKeyEncyrpted);
+            // write cipher text
+            appendByteToFile(new File(output_file),cipherText);
+		   if(DEBUG){
+		  	  // write signature
+			   System.out.println("Signature in HEX");
+	           System.out.println("Length: "+ signature.length);
+			    for (byte b : signature){
+			    	System.out.print(String.format("%02X ", b));
+			    }
+                System.out.println("\nAES encrypted key in HEX");
+                System.out.println("Length: "+ aesKeyEncyrpted.length);
+                for (byte b : aesKeyEncyrpted){
+              	  System.out.print(String.format("%02X ", b));
+                }
+         	   System.out.println("\nCiphter Text");
+         	   for (byte b : cipherText){
+         		   System.out.print(String.format("%02X ", b));
+         	   }
+         	   System.out.println();
+                
+           }
+  		}
+  		private void rsaEncrypt(String public_key_filename, String private_key_filename, Key aesKey) throws Exception{
+  			Cipher publicChiper = Cipher.getInstance("RSA");
+			Signature sig = Signature.getInstance("SHA512withRSA");
+			KeyFactory rsaKeyFactory = KeyFactory.getInstance("RSA");
+			PKCS8EncodedKeySpec privateSpec;
+			X509EncodedKeySpec publicSpec;
+			PrivateKey prvKey;
+			PublicKey pubKey;
 
+			// init RSA keys
+			privateKey = readByteFromFile(new File(private_key_filename));
+			publicKey = readByteFromFile(new File(public_key_filename));
+			privateSpec = new PKCS8EncodedKeySpec(privateKey);
+			publicSpec = new X509EncodedKeySpec(publicKey);
+			prvKey = rsaKeyFactory.generatePrivate(privateSpec);
+			pubKey = rsaKeyFactory.generatePublic(publicSpec);
+
+			publicChiper.init(Cipher.WRAP_MODE, pubKey);
+	        // encrypt AESkey
+			aesKeyEncyrpted = publicChiper.wrap(aesKey);
+
+			sig.initSign(prvKey);
+			//sig.update(iv);
+			sig.update(cipherText);
+			sig.update(aesKeyEncyrpted);
+			signature = sig.sign();
+  		}
+  		// AES encrypt plain text
+  		private byte[] aesEncrypt(String plaintext_file,Key aesKey) throws Exception{
+  			byte[] cipherText=null;
+			Cipher secCipher = Cipher.getInstance("AES");
+  					// read bytes from the file
+			plainText = readByteFromFile(new File(plaintext_file));
+			// setup IV key with random data and encrypt the file using AES key.
+			secCipher.init(Cipher.ENCRYPT_MODE, aesKey);
+			iv = secCipher.getIV();
+			cipherText = secCipher.doFinal(plainText);
+			return cipherText;
+  		}
         /**********/
-        private static boolean isInputError(String[] args){
-          int arg_len=4;
-          if(args.length<arg_len){
-            System.out.println("Input arguments less than 3, please try again.");
-            return true;
-          }
-          for(int i=0;i<arg_len-1;i++){
-            if(!new File(args[i]).isFile()){
-              System.out.println("File: " + args[i] + " not exist or not a file");
-              return true;
+        private static boolean areFile(String a,String b, String c){
+
+            if(!new File(a).isFile()){
+              System.out.println("File: " + a + " not exist or not a file");
+              return false;
             }
-
-          }
-
-          return false;
+            if(!new File(b).isFile()){
+                System.out.println("File: " + b + " not exist or not a file");
+                return false;
+              }
+            if(!new File(c).isFile()){
+                System.out.println("File: " + c + " not exist or not a file");
+                return false;
+              }
+          return true;
         }
 
 	// read bytes from a file
