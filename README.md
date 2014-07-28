@@ -1,8 +1,8 @@
 #Problem Set 1: Cryptography
 
-##Requirements: JDK 1.6+
+Requirements: JDK 1.6+
 
-##Compile: $make
+Compile: $make
 Delete .class files: $make clean
 
 ##Run: 
