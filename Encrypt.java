@@ -3,6 +3,7 @@
 // Usage: jave Encrypt PUBLIC_KEY.der PRIVATE_KEY.der PLAINTEXT
 
 import javax.crypto.*;
+
 import java.security.*;
 import java.security.spec.*;
 import java.io.*;
@@ -13,11 +14,14 @@ public class Encrypt {
     byte[] iv, cipherText, publicKey, plainText, privateKey, signature, aesKeyEncyrpted;
 
 	public Encrypt(String public_key_filename, String private_key_filename, String plaintext_file, String output_file){
-		Key aesKey;
 		// check if file exist;
 		if(!areFile(public_key_filename,private_key_filename,plaintext_file)){
 			System.exit(0);
 		}
+		readFiles(public_key_filename,private_key_filename);
+		
+		Key aesKey;
+
 		try{
 	        /*********** Symmetric Encryption *************/	
 			// Symmetric (AES) key generation
@@ -25,7 +29,7 @@ public class Encrypt {
 			aesKey = aesKeyGen.generateKey();
 			cipherText=aesEncrypt(plaintext_file,aesKey);
 			/*************  RSA Encryption *****************/
-			rsaEncrypt(public_key_filename,private_key_filename,aesKey);
+			rsaEncrypt(aesKey);
 			// write crypted data 2 file
 			write2file(output_file);
 		}catch(Exception e){
@@ -60,7 +64,17 @@ public class Encrypt {
                 
            }
   		}
-  		private void rsaEncrypt(String public_key_filename, String private_key_filename, Key aesKey) throws Exception{
+  		protected void readFiles(String public_key_filename, String private_key_filename){
+
+			try {
+				privateKey = readByteFromFile(new File(private_key_filename));
+				publicKey = readByteFromFile(new File(public_key_filename));
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+  		}
+  		private void rsaEncrypt(Key aesKey) throws Exception{
   			Cipher publicChiper = Cipher.getInstance("RSA");
 			Signature sig = Signature.getInstance("SHA512withRSA");
 			KeyFactory rsaKeyFactory = KeyFactory.getInstance("RSA");
@@ -70,8 +84,6 @@ public class Encrypt {
 			PublicKey pubKey;
 
 			// init RSA keys
-			privateKey = readByteFromFile(new File(private_key_filename));
-			publicKey = readByteFromFile(new File(public_key_filename));
 			privateSpec = new PKCS8EncodedKeySpec(privateKey);
 			publicSpec = new X509EncodedKeySpec(publicKey);
 			prvKey = rsaKeyFactory.generatePrivate(privateSpec);

@@ -1,9 +1,4 @@
 
-import javax.crypto.*;
-import java.security.*;
-import java.security.spec.*;
-import java.io.*;
-import java.util.*;
 
 public class fcrypt {
         public static void main(String[] args){

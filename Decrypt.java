@@ -1,8 +1,5 @@
-// Amirali Sanatinia amirali@ccs.neu.edu
-// Network Security JCE demo
-// Usage: jave Encrypt PUBLIC_KEY.der PRIVATE_KEY.der PLAINTEXT
-
 import javax.crypto.*;
+
 import java.security.*;
 import java.security.spec.*;
 import java.io.*;
@@ -13,22 +10,37 @@ public class Decrypt {
 	byte[] signature=null;
 	byte[] cipher_text=null;
 	byte[] aesKeyEncyrpted=null;
-	
+
+	byte[] privateKey=null,publicKey=null;
+
      /** Init ***/
      public Decrypt(String public_key_filename, String private_key_filename,String plaintext_filename,String cipher_filename) {
-        if(isDecryptInputError(public_key_filename,private_key_filename,cipher_filename))
-             System.exit(0);
-        try{
-        	getKeyAndCipher(cipher_filename);
-        	this.decrypt(public_key_filename,private_key_filename,plaintext_filename,cipher_filename);
 
-        }catch(Exception e){
-        	System.out.println("Error: " + e.getMessage());
-        	System.exit(0);
-        }
+        	byte[] plaintext;
+        	readFiles(public_key_filename,private_key_filename,cipher_filename);
+			try {
+				plaintext = this.decrypt();
+				writeByteToFile(new File(plaintext_filename),plaintext);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+
 
      }
-     private void decrypt(String public_key_filename, String private_key_filename,String plaintext_filename,String cipher_filename)throws Exception{
+     
+     protected void readFiles(String public_key_filename, String private_key_filename,String cipher_filename){   
+	      try{
+	    	  	getKeyAndCipher(cipher_filename);      	// get public key
+	  			privateKey = readByteFromFile(new File(private_key_filename));
+	  			publicKey = readByteFromFile(new File(public_key_filename));        
+	  		}catch(Exception e){
+	        	System.out.println("Error: " + e.getMessage());
+	        	System.exit(0);
+	        }
+     }
+     private byte[] decrypt()throws Exception{
 
 		// Public, private and signature instances
 
@@ -36,7 +48,7 @@ public class Decrypt {
 		SecretKey aesKey=null;
 		// verify and decrypt aes key
 		try{
-			aesKey=getSecKey(public_key_filename,private_key_filename);
+			aesKey=getSecKey();
 		}catch(Exception e){
 			System.out.println(e.getMessage());
 			System.exit(0);
@@ -48,10 +60,10 @@ public class Decrypt {
 	     	for(byte b : plaintext){
 	     		System.out.print((char)b);
 	     	}
-	    writeByteToFile(new File(plaintext_filename),plaintext);
+     	return plaintext;
 
      }
-     private SecretKey getSecKey(String public_key_filename, String private_key_filename)throws Exception{
+     private SecretKey getSecKey()throws Exception{
 		Signature sig = Signature.getInstance("SHA512withRSA");
 		KeyFactory rsaKeyFactory = KeyFactory.getInstance("RSA");
      	Cipher publicChiper = Cipher.getInstance("RSA");
@@ -59,18 +71,8 @@ public class Decrypt {
 		PKCS8EncodedKeySpec privateSpec;
 		PrivateKey prvKey;
 		PublicKey pubKey;
-		byte[] privateKey=null,publicKey=null;
 		SecretKey aesKey=null;
-	    // read public key from file
-     	try{
-     		privateKey = readByteFromFile(new File(private_key_filename));
-     	}catch(Exception e){
-     		System.out.println("readByteFromFile() Error: " + e.getMessage());
-     		System.exit(0);
-     	}
-     	// get public key
-		privateKey = readByteFromFile(new File(private_key_filename));
-		publicKey = readByteFromFile(new File(public_key_filename));
+	    
 		privateSpec = new PKCS8EncodedKeySpec(privateKey);
 		publicSpec = new X509EncodedKeySpec(publicKey);
 		prvKey = rsaKeyFactory.generatePrivate(privateSpec);
@@ -97,10 +99,6 @@ public class Decrypt {
 	     	sig.update(cipher_text);
 	     	sig.update(this.aesKeyEncyrpted);
 	     	boolean ok=sig.verify(signature);
-	     	System.out.println("Verify Processing Info: ");
-      		System.out.println("Number of input bytes = "+cipher_text.length);
-      		System.out.println("signature bytes = "+signature.length);
-     		System.out.println("Verification result = "+ok);
      		return ok;
 	     }catch(Exception e){
 	     	System.out.println("Sig verify error: " + e.getMessage());
